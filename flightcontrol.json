@@ -1,0 +1,80 @@
+{
+    "$schema": "https://app.flightcontrol.dev/schema.json",
+    "environments": [
+      {
+        "id": "production",
+        "name": "Production",
+        "region": "ap-southeast-2",
+        "source": {
+          "branch": "main",
+          "pr": false,
+          "trigger": "push"
+        },
+        "services": [
+          {
+            "id": "rails-app",
+            "name": "Rails App",
+            "buildType": "nixpacks",
+            "cpu": 0.5,
+            "memory": 1,
+            "containerInsights": false,
+            "minInstances": 1,
+            "maxInstances": 1,
+            "versionHistoryCount": 10,
+            "basePath": ".",
+            "installCommand": "bundle install && rails db:migrate",
+            "buildCommand": "bundle exec rails db:migrate && bundle exec rake assets:precompile",
+            "dockerfilePath": "Dockerfile",
+            "dockerContext": ".",
+            "autoscaling": {
+              "cpuThreshold": 70,
+              "memoryThreshold": 70,
+              "cooldownTimerSecs": 300,
+              "requestsPerTarget": 500
+            },
+            "includeEnvVariablesInBuild": true,
+            "type": "fargate",
+            "healthCheckPath": "/up",
+            "enableCloudfrontSwr": false,
+            "port": 3000
+          },
+          {
+            "id": "sidekiq-worker",
+            "name": "Sidekiq Worker",
+            "type": "fargate-worker",
+            "buildType": "nixpacks",
+            "cpu": 0.25,
+            "memory": 0.5,
+            "minInstances": 1,
+            "maxInstances": 1,
+            "startCommand": "bundle exec sidekiq"
+          },
+          {
+            "id": "database",
+            "name": "Database",
+            "type": "rds",
+            "instanceSize": "db.t4g.micro",
+            "private": false,
+            "storage": 20,
+            "maxStorage": 100,
+            "autoUpgradeMinorVersions": true,
+            "applyChangesImmediately": false,
+            "deletionProtection": true,
+            "connectionStringEnvVarName": "DATABASE_URL",
+            "engine": "postgres",
+            "engineVersion": "15",
+            "port": 5432
+          },
+          {
+            "id": "redis",
+            "name": "Redis",
+            "type": "elasticache",
+            "engine": "redis",
+            "engineVersion": "7.0",
+            "instanceSize": "cache.t4g.small",
+            "connectionStringEnvVarName": "REDIS_URL"
+          }
+        ]
+      }
+    ]
+  }
